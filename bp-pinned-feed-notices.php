@@ -13,7 +13,7 @@
  * Plugin Name:       Pinned Feed Notices for BuddyPress
  * Plugin URI:        https://gianniskipouros.com/bp-pinned-feed-notices/
  * Description:       Add custom notices  to the top of the main activity feed.
- * Version:           1.0.2
+ * Version:           1.0.3
  * Author:            Giannis Kipouros
  * Author URI:        https://gianniskipouros.com
  * License:           GPL-2.0+
@@ -31,7 +31,7 @@ if ( ! defined( 'BPPFN_VERSION' ) ) {
 	/**
 	 * The version of the plugin.
 	 */
-	define( 'BPPFN_VERSION', '1.0.2' );
+	define( 'BPPFN_VERSION', '1.0.3' );
 }
 
 if ( ! defined( 'BPPFN_PATH' ) ) {

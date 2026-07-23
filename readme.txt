@@ -2,9 +2,9 @@
 Contributors: giannis4
 Tags: buddypress, feed, notices
 Requires at least: 5.7
-Tested up to: 6.2
+Tested up to: 6.7.1
 Requires PHP: 7.2
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=J7GGEGDD4XV5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -37,6 +37,10 @@ There are no FAQ just yet.
 3. Front-end display of the notices.
 
 == Changelog ==
+
+= 1.0.3 =
+* Update: WordPress 6.7.1
+* Update: BuddyPress 14.3.3
 
 = 1.0.2 =
 * Update: WordPress 6.2
