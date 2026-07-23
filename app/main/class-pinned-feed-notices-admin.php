@@ -22,16 +22,54 @@ if ( ! class_exists( 'BP_Pinned_Feed_Notices_Admin' ) ) {
 
 
         /**
-         * Constructor for class.
+         * Option storing the version whose rewrite rules were last flushed.
          */
-        public function __construct() {
+        const REWRITE_VERSION_OPTION = 'bppfn_rewrite_version';
 
+        /**
+         * Single instance of this class.
+         *
+         * @var BP_Pinned_Feed_Notices_Admin|null
+         */
+        private static $instance = null;
+
+        /**
+         * Get the single instance, creating it on first call.
+         *
+         * @return BP_Pinned_Feed_Notices_Admin
+         */
+        public static function get_instance() {
+
+            if ( self::$instance === null ) {
+                self::$instance = new self();
+            }
+
+            return self::$instance;
+        }
+
+        /**
+         * Constructor. Private so the hooks can only ever be registered once.
+         */
+        private function __construct() {
 
             $this->load_hooks();
         }
 
         private function load_hooks() {
+
+            /*
+             * The post type has to be registered on the front end as well, otherwise the
+             * feed query has nothing to look up, so these two stay outside the admin guard.
+             */
             add_action( 'init', array( $this, 'create_feed_notices_cpt' ), 0 );
+
+            // Runs after the post type is registered above.
+            add_action( 'init', array( $this, 'maybe_flush_rewrite_rules' ), 20 );
+
+            // Everything below only ever fires inside wp-admin.
+            if ( ! is_admin() ) {
+                return;
+            }
 
             add_action( 'edit_form_after_editor',
                 array( $this, 'add_members_field_to_pfn' ) );
@@ -76,13 +114,21 @@ if ( ! class_exists( 'BP_Pinned_Feed_Notices_Admin' ) ) {
                 'items_list_navigation' => __( 'Notices list navigation', 'bp-pinned-feed-notices' ),
                 'filter_items_list'     => __( 'Filter items list', 'bp-pinned-feed-notices' ),
             );
+            /*
+             * Notices are fragments rendered inside the activity feed, never standalone pages.
+             * public/publicly_queryable/rewrite are therefore all false: no front-end URL, no
+             * archive, and no rewrite rules to maintain. show_ui keeps the admin screens.
+             *
+             * show_in_rest stays false because the member type field below is attached to
+             * edit_form_after_editor, which is a classic editor hook.
+             */
             $args   = array(
                 'label'               => __( 'Feed Notice', 'bp-pinned-feed-notices' ),
                 'description'         => __( 'Notices that appear pinned on top of the main activity feed', 'bp-pinned-feed-notices' ),
                 'labels'              => $labels,
                 'supports'            => array( 'title', 'editor' ),
                 'hierarchical'        => false,
-                'public'              => true,
+                'public'              => false,
                 'show_ui'             => true,
                 'show_in_menu'        => true,
                 'menu_position'       => 5,
@@ -92,8 +138,8 @@ if ( ! class_exists( 'BP_Pinned_Feed_Notices_Admin' ) ) {
                 'can_export'          => false,
                 'has_archive'         => false,
                 'exclude_from_search' => true,
-                'publicly_queryable'  => true,
-                'rewrite'             => true,
+                'publicly_queryable'  => false,
+                'rewrite'             => false,
                 'capability_type'     => 'page',
                 'show_in_rest'        => false,
             );
@@ -101,6 +147,28 @@ if ( ! class_exists( 'BP_Pinned_Feed_Notices_Admin' ) ) {
 
         }
 
+
+        /**
+         * Flush rewrite rules once per plugin version.
+         *
+         * Earlier versions registered the notice post type as public with rewrite rules.
+         * Those rules survive in the rewrite_rules option until something flushes them, and
+         * a plugin has no activation hook that fires on upgrade, so this does it on the first
+         * request after the version changes.
+         *
+         * @return void
+         */
+        public function maybe_flush_rewrite_rules() {
+
+            if ( get_option( self::REWRITE_VERSION_OPTION ) === BPPFN_VERSION ) {
+                return;
+            }
+
+            // Soft flush: regenerates the rules without touching .htaccess.
+            flush_rewrite_rules( false );
+
+            update_option( self::REWRITE_VERSION_OPTION, BPPFN_VERSION );
+        }
 
         /**
          * Add selection of member types
@@ -126,26 +194,27 @@ if ( ! class_exists( 'BP_Pinned_Feed_Notices_Admin' ) ) {
 
             sort( $member_types );
 
-            $selected_member_types = array();
+            // $post is already confirmed to be one of our notices, so read the meta from it
+            // directly. Relying on $_GET['post'] missed every edit context that does not put
+            // the ID in the query string, and the empty state then saved back as "no blocks".
+            $selected_member_types = get_post_meta( $post->ID, 'notice-blocked-member-types', true );
 
-            if ( isset( $_GET['post'] ) && absint( $_GET['post'] ) > 0 ) {
-                $post_id               = absint( $_GET['post'] );
-                $selected_member_types = (array) get_post_meta( $post_id, 'notice-blocked-member-types', true );
+            if ( ! is_array( $selected_member_types ) ) {
+                $selected_member_types = array();
             }
             ?>
 			<div id="member-type-selection" class="member-type-selection">
-				<h3><?php _e( 'Hide for the following Member Types', 'bp-pinned-feed-notices' ); ?></h3>
+				<h3><?php esc_html_e( 'Hide for the following Member Types', 'bp-pinned-feed-notices' ); ?></h3>
                 <?php
+                // Nonce for the save handler. Without it the handler cannot tell a genuine
+                // editor submission from a Quick Edit or an autosave, and would wipe the selection.
+                wp_nonce_field( 'bppfn_save_member_types', 'bppfn_member_types_nonce' );
 
-                if ( count( $member_types ) > 1 ) { ?>
+                if ( count( $member_types ) > 0 ) { ?>
 					<table>
                         <?php
                         foreach ( $member_types as $member_type ) {
-                            $mt_object   = bp_get_member_type_object( $member_type );
-                            $checked     = '';
-                            if ( in_array( $member_type, $selected_member_types ) ) {
-                                $checked = 'checked';
-                            }
+                            $mt_object = bp_get_member_type_object( $member_type );
                             ?>
 							<tr>
 								<td>
@@ -153,10 +222,10 @@ if ( ! class_exists( 'BP_Pinned_Feed_Notices_Admin' ) ) {
 										<input type="checkbox" name="notices-member-types[]"
 											   value="<?php echo esc_attr( $member_type ); ?>"
 											   id="<?php echo esc_attr( $member_type ); ?>-member-type"
-                                            <?php echo $checked; ?>
+                                            <?php checked( in_array( $member_type, $selected_member_types, true ) ); ?>
 										>
 										<label for="<?php echo esc_attr( $member_type ); ?>-member-type"><?php
-                                            echo esc_attr( $mt_object->labels['name'] ); ?></label>
+                                            echo esc_html( $mt_object->labels['name'] ); ?></label>
 									</fieldset>
 								</td>
 							</tr>
@@ -164,7 +233,7 @@ if ( ! class_exists( 'BP_Pinned_Feed_Notices_Admin' ) ) {
 					</table>
                     <?php
                 } else {
-                    _e( 'Sorry, there are no member types currently set up.', 'bp-pinned-feed-notices' );
+                    esc_html_e( 'Sorry, there are no member types currently set up.', 'bp-pinned-feed-notices' );
                 }
                 ?>
 			</div>
@@ -177,27 +246,54 @@ if ( ! class_exists( 'BP_Pinned_Feed_Notices_Admin' ) ) {
          * Store the user's "Hide for profile types" selection on the
          * admin Feed Notices single edit page.
          *
-         * @param $post_id
+         * @param  int $post_id The post being saved.
+         * @return void
          */
-        function store_hide_notice_for_member_types_selection( $post_id ) {
+        public function store_hide_notice_for_member_types_selection( $post_id ) {
 
-            if ( ! isset( $_REQUEST['notices-member-types'] ) ||
-                 empty( $_REQUEST['notices-member-types'] ) ) {
-                delete_post_meta( $post_id, 'notice-blocked-member-types' );
-            } else {
-                // Sanitize inputs
-                $hide_for_member_types = array_map(
-                    'sanitize_text_field',
-                    $_REQUEST['notices-member-types']
-                );
-                update_post_meta(
-                    $post_id,
-                    'notice-blocked-member-types',
-                    $hide_for_member_types
-                );
+            // Only act on our own post type.
+            if ( get_post_type( $post_id ) !== 'pinned_feed_notices' ) {
+                return;
             }
+
+            /*
+             * The nonce is only present when the full editor form was submitted. Bailing here
+             * also covers Quick Edit, bulk edit, autosaves, revisions and programmatic saves,
+             * none of which carry the checkboxes. Treating those as "user unticked everything"
+             * would silently wipe the stored selection.
+             */
+            if ( ! isset( $_POST['bppfn_member_types_nonce'] ) ||
+                 ! wp_verify_nonce(
+                     sanitize_text_field( wp_unslash( $_POST['bppfn_member_types_nonce'] ) ),
+                     'bppfn_save_member_types'
+                 ) ) {
+                return;
+            }
+
+            if ( ! current_user_can( 'edit_post', $post_id ) ) {
+                return;
+            }
+
+            // No boxes ticked means the notice is visible to every member type.
+            if ( empty( $_POST['notices-member-types'] ) || ! is_array( $_POST['notices-member-types'] ) ) {
+                delete_post_meta( $post_id, 'notice-blocked-member-types' );
+
+                return;
+            }
+
+            // Sanitize inputs
+            $hide_for_member_types = array_map(
+                'sanitize_text_field',
+                wp_unslash( $_POST['notices-member-types'] )
+            );
+
+            update_post_meta(
+                $post_id,
+                'notice-blocked-member-types',
+                $hide_for_member_types
+            );
         }
     }
 
-    new BP_Pinned_Feed_Notices_Admin();
+    BP_Pinned_Feed_Notices_Admin::get_instance();
 }

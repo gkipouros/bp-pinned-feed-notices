@@ -1,4 +1,4 @@
-.bp-pinned-feed-notice-wrapper {
+.bp-pinned-feed-notice-wrapper, .entry-content ul.bp-pinned-feed-notice-wrapper {
 	list-style: none;
 	padding: 0;
 	margin: 0;
@@ -27,11 +27,54 @@
 .bp-pinned-feed-notice-wrapper .bp-pinned-feed-notice p:last-of-type{
 	margin-bottom: 0;
 }
+/* Dismiss control. It is a real <button>, so the browser defaults are stripped back
+   to what the old <span> looked like while keeping the keyboard behaviour. */
 .bp-pinned-feed-notice-wrapper .bp-pinned-feed-notice .remove-notification{
 	position: absolute;
 	right: 10px;
 	top: 6px;
 	color: #000;
 	cursor: pointer;
+	background: none;
+	border: 0;
+	margin: 0;
+	padding: 0 4px;
+	font-family: inherit;
+	font-size: 18px;
+	line-height: 1;
+	border-radius: 3px;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+/* Keyboard focus must stay visible even on themes that blanket-remove outlines.
+   :focus is the fallback, then it is withdrawn again for pointer users where
+   :focus-visible is understood. */
+.bp-pinned-feed-notice-wrapper .bp-pinned-feed-notice .remove-notification:focus{
+	outline: 2px solid #0073aa;
+	outline-offset: 2px;
+}
+
+.bp-pinned-feed-notice-wrapper .bp-pinned-feed-notice .remove-notification:focus:not(:focus-visible){
+	outline: none;
+}
+
+.bp-pinned-feed-notice-wrapper .bp-pinned-feed-notice .remove-notification:focus-visible{
+	outline: 2px solid #0073aa;
+	outline-offset: 2px;
+}
+
+/* Live region text: available to screen readers, out of the way visually. */
+.bp-pinned-feed-notice-wrapper .bppfn-visually-hidden{
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
 }
 

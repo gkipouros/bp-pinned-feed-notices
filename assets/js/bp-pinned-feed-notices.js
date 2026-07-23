@@ -52,12 +52,30 @@
 					},
 
 					success: function (ajaxResponse) {
+						// wp_send_json_success()/_error() nest the payload under "data".
 						if(!ajaxResponse.success) {
-							console.error(ajaxResponse.content);
+							console.error(ajaxResponse.data ? ajaxResponse.data.content : 'Unknown error');
 							return;
 						}
 
-						$(this).closest( '.bp-pinned-feed-notice').slideUp(600);
+						let $notice  = $(this).closest('.bp-pinned-feed-notice');
+						let $wrapper = $notice.closest('.bp-pinned-feed-notice-wrapper');
+
+						// Grab the next dismiss button before this one leaves the document.
+						let $next = $notice.nextAll('.bp-pinned-feed-notice').first()
+							.find('.remove-notification').first();
+
+						$notice.slideUp(600, function () {
+							// Remove rather than just hide, so the live region sees a change.
+							$(this).remove();
+
+							$wrapper.find('.bppfn-notice-status').text(BPPfnAjaxObject.removed_text);
+
+							// Focus would otherwise fall back to <body> now the button is gone.
+							if ($next.length) {
+								$next.trigger('focus');
+							}
+						});
 					}
 				});
 

@@ -13,7 +13,7 @@
  * Plugin Name:       Pinned Feed Notices for BuddyPress
  * Plugin URI:        https://gianniskipouros.com/bp-pinned-feed-notices/
  * Description:       Add custom notices  to the top of the main activity feed.
- * Version:           1.0.3
+ * Version:           1.1.0
  * Author:            Giannis Kipouros
  * Author URI:        https://gianniskipouros.com
  * License:           GPL-2.0+
@@ -31,7 +31,7 @@ if ( ! defined( 'BPPFN_VERSION' ) ) {
 	/**
 	 * The version of the plugin.
 	 */
-	define( 'BPPFN_VERSION', '1.0.3' );
+	define( 'BPPFN_VERSION', '1.1.0' );
 }
 
 if ( ! defined( 'BPPFN_PATH' ) ) {
@@ -60,8 +60,17 @@ if ( ! defined( 'BPPFN_BASE_NAME' ) ) {
  */
 function bppfn_include_plugin_files() {
 
-    // Bail out if BP is not enabled.
-    if ( ! function_exists('bp_is_active') ) {
+    /*
+     * BuddyPress or BuddyBoss Platform has to be running. Both define bp_is_active(),
+     * so testing for the function covers either one.
+     *
+     * A "Requires Plugins" header is deliberately not used here. That header matches
+     * wordpress.org slugs and treats every entry as mandatory, so requiring "buddypress"
+     * would stop this plugin activating on the BuddyBoss sites it also supports.
+     */
+    if ( ! function_exists( 'bp_is_active' ) ) {
+        add_action( 'admin_notices', 'bppfn_missing_bp_notice' );
+
         return;
     }
 
@@ -70,14 +79,6 @@ function bppfn_include_plugin_files() {
 		'app/main/class-pinned-feed-notices',
         'app/main/class-pinned-feed-notices-admin',
 	);
-
-	// Include Includes files
-	$includes = array(
-
-	);
-
-	// Merge the two arrays
-	$files = array_merge( $files, $includes );
 
 	foreach ( $files as $file ) {
 
@@ -89,6 +90,32 @@ function bppfn_include_plugin_files() {
 }
 
 add_action( 'plugins_loaded', 'bppfn_include_plugin_files' );
+
+/**
+ * Warn administrators when the plugin has nothing to attach to.
+ *
+ * Without this the plugin bails silently and looks broken rather than unmet.
+ *
+ * @return void
+ */
+function bppfn_missing_bp_notice() {
+
+    if ( ! current_user_can( 'activate_plugins' ) ) {
+        return;
+    }
+    ?>
+	<div class="notice notice-error">
+		<p>
+            <?php
+            esc_html_e(
+                'Pinned Feed Notices for BuddyPress is inactive because neither BuddyPress nor BuddyBoss Platform is running. Activate one of them to display your notices.',
+                'bp-pinned-feed-notices'
+            );
+            ?>
+		</p>
+	</div>
+    <?php
+}
 
 
 /**
