@@ -14,7 +14,7 @@
  * Plugin URI:        https://gianniskipouros.com/bp-pinned-feed-notices/
  * Description:       Add custom notices  to the top of the main activity feed.
  * Version:           1.1.0
- * Author:            Giannis Kipouros
+ * Author:            The WP Garden
  * Author URI:        https://thewpgarden.com/
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
