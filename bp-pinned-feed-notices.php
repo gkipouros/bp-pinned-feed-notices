@@ -5,7 +5,7 @@
  * Add custom notices  to the top of the main activity feed. You can add as many as you want,
  * select the member types who will see the notice, and allow visitors to hide the notice.
  *
- * @link              https://gianniskipouros.com/bp-pinned-feed-notices/
+ * @link              https://thewpgarden.com/plugins/bp-pinned-feed-notices/
  * @since             1.0.0
  * @package           bp-pinned-feed-notices
  *
@@ -15,7 +15,7 @@
  * Description:       Add custom notices  to the top of the main activity feed.
  * Version:           1.1.0
  * Author:            Giannis Kipouros
- * Author URI:        https://gianniskipouros.com
+ * Author URI:        https://thewpgarden.com/
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       bp-pinned-feed-notices
