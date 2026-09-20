@@ -1,5 +1,5 @@
 === Pinned Feed Notices for BuddyPress ===
-Contributors: giannis4
+Contributors: giannis4, thewpgarden
 Tags: buddypress, feed, notices, user
 Requires at least: 5.7
 Tested up to: 7.0.2
